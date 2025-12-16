@@ -1,0 +1,67 @@
+[please]
+version = 17.8.7
+
+[PluginDefinition]
+name = solidity
+
+# ============================================================
+# CONFIGURATION OPTIONS
+# ============================================================
+
+[PluginConfig "forge_tool"]
+ConfigKey = ForgeTool
+DefaultValue = ~/.foundry/bin/forge
+Help = Path or build label for the forge tool. Default assumes Foundry is installed via foundryup.
+Inherit = true
+
+[PluginConfig "default_solc_version"]
+ConfigKey = DefaultSolcVersion
+DefaultValue = 0.8.20
+Help = Default Solidity compiler version when not specified per-rule
+Inherit = true
+
+[PluginConfig "abigen_tool"]
+ConfigKey = AbigenTool
+Help = Build label for the abigen tool (for Go bindings). If not set, Go bindings will not be generated.
+Optional = true
+Inherit = true
+
+[PluginConfig "go_ethereum_dep"]
+ConfigKey = GoEthereumDep
+Help = Build label for go-ethereum dependency (required by generated Go bindings)
+Optional = true
+Inherit = true
+
+[PluginConfig "default_languages"]
+ConfigKey = DefaultLanguages
+DefaultValue = go
+Repeatable = true
+Help = Default output languages for sol_contract (currently only 'go' is supported)
+Inherit = true
+
+[PluginConfig "optimize"]
+ConfigKey = Optimize
+DefaultValue = true
+Type = bool
+Help = Enable Solidity optimizer
+Inherit = true
+
+[PluginConfig "optimizer_runs"]
+ConfigKey = OptimizerRuns
+DefaultValue = 100
+Help = Number of optimizer runs
+Inherit = true
+
+[PluginConfig "import_remappings"]
+ConfigKey = ImportRemappings
+Repeatable = true
+Optional = true
+Help = Import path remappings in the format 'from=to' (e.g., '@openzeppelin/contracts/=third_party/solidity/openzeppelin-contracts/')
+Inherit = true
+
+[PluginConfig "sandbox"]
+ConfigKey = Sandbox
+DefaultValue = false
+Type = bool
+Help = Enable sandbox for forge builds. Disabled by default because forge needs access to ~/.svm for solc versions.
+Inherit = true

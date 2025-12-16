@@ -1,0 +1,564 @@
+"""Solidity build rules for Please.
+
+This plugin provides rules for compiling Solidity smart contracts using Foundry's forge.
+
+SECURITY NOTE:
+- sandbox=False is required for forge to access ~/.svm for solc version downloads
+- Use the `hashes` parameter in sol_get() for supply chain security
+- All user inputs are shell-quoted to prevent injection
+"""
+
+# =============================================================================
+# SECURITY HELPERS
+# =============================================================================
+
+def _shell_quote(s: str) -> str:
+    """Shell-escape a string by wrapping in single quotes.
+
+    This prevents shell injection by ensuring the string is treated as a literal.
+    Single quotes inside the string are escaped using the shell idiom: '\\''
+
+    Example: "foo'bar" becomes "'foo'\\''bar'"
+    """
+    if not s:
+        return "''"
+    return "'" + s.replace("'", "'\\''") + "'"
+
+
+def _escape_sed_pattern(s: str) -> str:
+    """Escape special characters for use in sed s/// patterns.
+
+    Escapes: \\ & / and the delimiter we use (/)
+    """
+    result = s
+    result = result.replace('\\', '\\\\')  # Must be first
+    result = result.replace('&', '\\&')
+    result = result.replace('/', '\\/')
+    return result
+
+
+def _validate_no_traversal(path: str, param_name: str):
+    """Validate that a path doesn't contain directory traversal sequences."""
+    if '..' in path:
+        fail(f"{param_name} cannot contain '..': {path}")
+
+
+# =============================================================================
+# VERSION HELPERS
+# =============================================================================
+
+def _version_tuple(v):
+    """Converts a version string like '0.8.20' to a list of integers."""
+    filled = []
+    for point in v.split("."):
+        filled.append(int(point))
+    return filled
+
+
+def _compare_version_lists(a, b):
+    """Returns True if version a >= version b."""
+    i = 0
+    for x in a:
+        if a[i] > b[i]:
+            return True
+        if b[i] > a[i]:
+            return False
+        i += 1
+    return True
+
+
+# =============================================================================
+# CONFIG ACCESSORS
+# =============================================================================
+
+def _get_forge_tool():
+    """Returns the forge tool from config."""
+    return CONFIG.SOLIDITY.FORGE_TOOL
+
+
+def _get_default_solc_version():
+    """Returns the default solc version from config."""
+    return CONFIG.SOLIDITY.DEFAULT_SOLC_VERSION
+
+
+def _get_abigen_tool():
+    """Returns the abigen tool from config, or None if not configured."""
+    tool = CONFIG.SOLIDITY.ABIGEN_TOOL
+    return tool if tool else None
+
+
+def _get_go_ethereum_dep():
+    """Returns the go-ethereum dependency from config, or None if not configured."""
+    dep = CONFIG.SOLIDITY.GO_ETHEREUM_DEP
+    return dep if dep else None
+
+
+def _get_default_languages():
+    """Returns the default languages from config."""
+    return CONFIG.SOLIDITY.DEFAULT_LANGUAGES or ['go']
+
+
+def _get_optimizer_settings():
+    """Returns optimizer settings from config."""
+    optimize = CONFIG.SOLIDITY.OPTIMIZE
+    runs = CONFIG.SOLIDITY.OPTIMIZER_RUNS or 100
+    return optimize, runs
+
+
+def _get_import_remappings():
+    """Returns import remappings from config as a dict."""
+    remappings = CONFIG.SOLIDITY.IMPORT_REMAPPINGS or []
+    result = {}
+    for mapping in remappings:
+        if '=' in mapping:
+            from_path, to_path = mapping.split('=', 1)
+            result[from_path] = to_path
+    return result
+
+
+def _get_sandbox():
+    """Returns whether to use sandbox from config."""
+    return CONFIG.SOLIDITY.SANDBOX
+
+
+# =============================================================================
+# BUILD RULES
+# =============================================================================
+
+def sol_library(
+        name: str,
+        src: str,
+        deps: list = [],
+        test_only: bool = False,
+        plugins: dict = {},
+        visibility: list = [],
+):
+    """Creates a Solidity library that can be used as a dependency.
+
+    This rule creates a filegroup that provides sol_srcs for downstream rules.
+    It's the basic building block for Solidity dependency management.
+
+    Args:
+        name: Name of the rule.
+        src: Solidity source file.
+        deps: Dependencies (other sol_library or sol_contract rules).
+        test_only: If True, only available to test rules.
+        plugins: Additional providers to add (e.g., sol_artifacts, go).
+        visibility: Visibility specification.
+
+    Returns:
+        A filegroup rule that provides sol_srcs.
+    """
+    solidity_rule = filegroup(
+        name = f'_{name}#solidity',
+        srcs = [src],
+        visibility = visibility,
+        exported_deps = deps,
+        requires = ['sol_srcs'],
+        output_is_complete = False,
+        test_only = test_only,
+    )
+    provides = {'sol_srcs': solidity_rule}
+
+    for lang, rule in plugins.items():
+        provides[lang] = rule
+
+    return filegroup(
+        name = name,
+        srcs = [src],
+        deps = provides.values(),
+        provides = provides,
+        visibility = visibility,
+        output_is_complete = False,
+        test_only = test_only,
+    )
+
+
+def sol_contract(
+        name: str,
+        src: str,
+        deps: list = [],
+        solc_version: str = None,
+        solc_flags: str = '',
+        contract_names: list = [],
+        skip: list = [],
+        languages: list = None,
+        test_only: bool = False,
+        visibility: list = [],
+        _is_dir: bool = False,
+):
+    """Compiles a Solidity contract using Forge.
+
+    This is the main compilation rule. It uses Foundry's forge to compile
+    Solidity contracts, extracts ABIs and bytecode, and optionally generates
+    language bindings (currently Go via abigen).
+
+    Args:
+        name: Name of the rule.
+        src: Solidity source file or directory.
+        deps: Dependencies (other sol_library or sol_contract rules).
+        solc_version: Solidity compiler version (e.g., "0.8.20"). Uses svm to download.
+            Defaults to the plugin's default_solc_version config.
+        solc_flags: Additional flags for solc/forge.
+        contract_names: Names of contracts in the source file. Required for
+            multi-contract files when generating language bindings.
+        skip: Contract names to skip during compilation.
+        languages: Output languages (e.g., ['go'] for Go bindings). Defaults to
+            the plugin's default_languages config.
+        test_only: If True, only available to test rules.
+        visibility: Visibility specification.
+
+    Returns:
+        sol_library rule that provides:
+        - sol_srcs: Solidity source files
+        - sol_artifacts: Compiled ABI and bytecode
+        - go: Go bindings (if 'go' in languages and abigen_tool configured)
+    """
+    # Apply defaults from config
+    if solc_version is None:
+        solc_version = _get_default_solc_version()
+    if languages is None:
+        languages = _get_default_languages()
+
+    # Extract interface and contract names from source
+    file_to_cat = '$SRCS'
+    cmd = ' && '.join([
+        f"cat {file_to_cat} | sed -n 's#.*interface \(.*\) {{#\\1#gp' | sed -e 's/\\s.*$//' > $OUTS",
+        f"cat {file_to_cat} | sed -n 's#.*contract \(.*\) {{#\\1#gp' | sed -e 's/\\s.*$//' >> $OUTS",
+        f"path={file_to_cat} && echo $path && base=$(basename $path)",
+        'sed -i -e "s/^/$base\\//" $OUTS',
+    ])
+    if _is_dir:
+        singleton_cmd = ' && '.join([
+            f"cat $file | sed -n 's#.*interface \(.*\) {{#\\1#gp' | sed -e 's/\\s.*$//' > tmp",
+            f"cat $file | sed -n 's#.*contract \(.*\) {{#\\1#gp' | sed -e 's/\\s.*$//' >> tmp",
+            f"path=$file && echo $path && base=$(basename $path)",
+            'sed -i -e "s/^/$base\\//" tmp',
+            "cat tmp >> $OUTS && cat $OUTS",
+        ])
+        file_to_cat = '$(find $SRCS -type f -printf "%T@ %p\\n" | sort -nr | cut -d\\  -f2-) '
+        cmd = f"touch $OUTS && for file in {file_to_cat}; do {singleton_cmd}; done"
+
+    interfaces_rule = genrule(
+        name = f"{name}_interfaces",
+        srcs = [src],
+        out = f"{name}.interfaces",
+        cmd = cmd,
+        test_only = test_only,
+    )
+
+    # Get forge tool from config
+    solc_tool = _get_forge_tool()
+
+    # Build skip flags for contracts to exclude (SECURITY: quote each item)
+    skip_cmd = ""
+    for skipped in skip:
+        quoted_skip = _shell_quote(skipped)
+        skip_cmd += f" --skip {quoted_skip} "
+
+    # Configure forge flags from config
+    optimize, optimizer_runs = _get_optimizer_settings()
+    forge_flags = ""
+    if optimize:
+        forge_flags = f"--optimize --optimizer-runs {optimizer_runs}"
+
+    # Add EVM version for newer solc versions
+    if _compare_version_lists(_version_tuple(solc_version), _version_tuple("0.8.20")):
+        forge_flags += " --evm-version paris"
+
+    # SECURITY: Quote solc_flags to prevent injection
+    all_flags = forge_flags
+    if solc_flags:
+        quoted_solc_flags = _shell_quote(solc_flags)
+        all_flags += " " + quoted_solc_flags
+
+    # Build the forge command
+    # SECURITY: Quote solc_version
+    quoted_solc_version = _shell_quote(solc_version)
+    setup_cmd = 'mkdir -p src && ([ -d "$SRCS" ] && cp -r "$SRCS"/* src/ 2>/dev/null || cp "$SRCS" src/ 2>/dev/null)'
+    solc_cmd = f'build --use {quoted_solc_version} {skip_cmd} {all_flags} --extra-output bin --extra-output-files bin --root . || [ -d out ]'
+
+    # Extract ABIs and bytecode from JSON files
+    abi_bin_extract = 'if [ -d out ]; then for json_file in $(find out -name "*.json" -type f 2>/dev/null); do jq ".abi" "$json_file" > "${json_file%.json}.abi" 2>/dev/null || true; jq -r ".bytecode.object // .bytecode" "$json_file" | sed "s/^0x//" > "${json_file%.json}.bin" 2>/dev/null || true; done; fi'
+
+    forge_build = genrule(
+        name = f"_{name}#forge_build",
+        srcs = [src],
+        deps = deps,
+        requires = ['sol_srcs'],
+        tools = {
+            "forge": solc_tool,
+        },
+        out = f"{name}_out",
+        needs_transitive_deps = True,
+        output_is_complete = True,
+        sandbox = _get_sandbox(),
+        cmd = f'{setup_cmd} && $TOOLS_FORGE {solc_cmd} && {abi_bin_extract} && mkdir -p $OUT && ([ -d out ] && mv out/* $OUT || mkdir -p $OUT)',
+        test_only = test_only,
+    )
+    plugins = {'sol_artifacts': forge_build}
+
+    # Generate Go bindings if requested and abigen is configured
+    abigen_tool = _get_abigen_tool()
+    go_ethereum_dep = _get_go_ethereum_dep()
+
+    if 'go' in languages and abigen_tool:
+        go_srcs = genrule(
+            name = f"_{name}#gosrcs",
+            srcs = {
+                "forge_build": forge_build,
+                "interfaces": interfaces_rule,
+            },
+            tools = [abigen_tool],
+            output_dirs = ["out/**"],
+            cmd = ' && '.join([
+                'mkdir out',
+                f'while read p; do $TOOL --type=instance --abi=$SRCS_FORGE_BUILD/"$p".abi --bin=$SRCS_FORGE_BUILD/"$p".bin --pkg=$(basename "${{p,,}}") --out=out/"$(basename ${{p,,}})".go; done < $SRCS_INTERFACES',
+            ]),
+            needs_transitive_deps = True,
+            visibility = visibility,
+            test_only = test_only,
+        )
+
+        # Build Go libraries for each contract
+        exported_deps = []
+        go_deps = [go_ethereum_dep] if go_ethereum_dep else []
+
+        if len(contract_names) == 0:
+            import_path = package_name() + "/" + name.replace("_", "")
+            go = go_library(
+                name = f'_{name}#golib',
+                srcs = [go_srcs],
+                deps = go_deps,
+                test_only = test_only,
+                import_path = import_path,
+                visibility = visibility,
+            )
+            exported_deps.append(go)
+
+        pkg = package_name()
+        for contract_name in contract_names:
+            contract_name_lower = contract_name.lower()
+            # SECURITY: Quote contract_name in shell command
+            quoted_contract = _shell_quote(contract_name_lower)
+            quoted_pkg = _shell_quote(pkg)
+            contract_go_srcs = genrule(
+                name = f"_{name}_{contract_name_lower}#gosrcs",
+                srcs = [go_srcs],
+                out = f'{contract_name_lower}.go',
+                cmd = f'mv $PKG_DIR/{quoted_contract}.go . && echo {quoted_pkg}',
+            )
+            import_path = package_name() + "/" + contract_name_lower
+            go = go_library(
+                name = f"_{name}_{contract_name_lower}#golib",
+                srcs = [contract_go_srcs],
+                deps = go_deps,
+                test_only = test_only,
+                import_path = import_path,
+                visibility = visibility,
+            )
+            exported_deps.append(go)
+
+        golibs = filegroup(
+            name = f"_{name}#golibs",
+            exported_deps = exported_deps,
+        )
+        plugins['go'] = golibs
+
+    # Return sol_library with all plugins
+    return sol_library(
+        name = name,
+        src = src,
+        deps = deps,
+        test_only = test_only,
+        plugins = plugins,
+        visibility = visibility,
+    )
+
+
+def sol_get(
+        name: str,
+        repo: str,
+        revision: str,
+        hashes: list = [],
+        deps: list = [],
+        solc_version: str = None,
+        package: str = '.',
+        install: list = ['.'],
+        solc_flags: str = '',
+        contract_names: list = [],
+        skip: list = [],
+        languages: list = None,
+        test_only: bool = False,
+        visibility: list = [],
+):
+    """Downloads a Solidity library from GitHub and compiles it.
+
+    This rule downloads Solidity source code from a GitHub repository,
+    applies import path remappings, and compiles it using sol_contract.
+
+    SECURITY: For supply chain security, provide SHA256 hashes to verify downloads.
+    Without hashes, a warning will be logged but the build will proceed.
+
+    Args:
+        name: Name of the rule.
+        repo: GitHub repo in 'org/repo' format (e.g., 'OpenZeppelin/openzeppelin-contracts').
+        revision: Git revision (commit SHA, tag, or branch).
+        hashes: SHA256 hashes for download verification. Format: ["sha256:abc123..."]
+            Strongly recommended for security - verifies the download hasn't been tampered with.
+        deps: Dependencies (other sol_library or sol_contract rules).
+        solc_version: Solidity compiler version. Defaults to plugin config.
+        package: Subdirectory within the repo containing sources.
+        install: List of subdirectories to install from the package.
+        solc_flags: Additional solc flags.
+        contract_names: Contract names for language binding generation.
+        skip: Contracts to skip during compilation.
+        languages: Output languages. Defaults to plugin config.
+        test_only: If True, only available to test rules.
+        visibility: Visibility specification.
+    """
+    # SECURITY: Validate no path traversal
+    _validate_no_traversal(package, "package")
+    for install_path in install:
+        _validate_no_traversal(install_path, "install")
+
+    org, _, repo_name = repo.partition('/')
+
+    # SECURITY: Log warning if no hash verification
+    if not hashes:
+        log.warning(f"sol_get('{name}'): No hash verification. Consider adding hashes=['sha256:...'] for supply chain security.")
+
+    zip_file = remote_file(
+        name = f"_{name}#zip",
+        url = f'https://github.com/{org}/{repo_name}/archive/{revision}.zip',
+        hashes = hashes,
+    )
+
+    # Get import remappings from config
+    remappings = _get_import_remappings()
+
+    # SECURITY: Quote all path components
+    cmds = [f'$TOOL x $SRCS -o tmp && mkdir $OUTS']
+    for install_path in install:
+        quoted_install = _shell_quote(install_path)
+        quoted_package = _shell_quote(package)
+        quoted_revision = _shell_quote(revision)
+
+        if install_path != ".":
+            cmds.append(f'mkdir -p $OUTS/{quoted_install}')
+        cmds.append("&&".join([
+            f'mv tmp/$OUTS-{quoted_revision}/{quoted_package}/{quoted_install}/*.sol $OUTS/{quoted_install} && rm -rf $OUTS/{quoted_install}/*.t.sol',
+        ]))
+
+        # SECURITY: Use escaped sed patterns
+        for from_path, to_path in remappings.items():
+            from_escaped = _escape_sed_pattern(from_path)
+            to_escaped = _escape_sed_pattern(to_path)
+            cmds.append("&&".join([
+                f"cd $OUTS/{quoted_install} && for FILE in *; do cat $FILE | sed 's/{from_escaped}/{to_escaped}/g' > \"$FILE.bak\"; rm -rf $FILE; mv \"$FILE.bak\" $FILE; done && cd -",
+            ]))
+
+    extract_rule = build_rule(
+        name = f"_{name}#extract",
+        srcs = [zip_file],
+        tools = [CONFIG.JARCAT_TOOL],
+        cmd = "&&".join(cmds),
+        outs = [name],
+        visibility = visibility,
+    )
+
+    sol_contract(
+        name = name,
+        src = extract_rule,
+        deps = deps,
+        solc_version = solc_version,
+        solc_flags = solc_flags,
+        contract_names = contract_names,
+        skip = skip,
+        languages = languages,
+        test_only = test_only,
+        visibility = visibility,
+        _is_dir = True,
+    )
+
+
+def sol_test(
+        name: str,
+        src: str,
+        deps: list = [],
+        solc_version: str = None,
+        solc_flags: str = '',
+        visibility: list = [],
+        timeout: int = 0,
+        labels: list = [],
+):
+    """Runs Solidity tests using Forge.
+
+    This rule compiles the test contract and runs it using Foundry's forge test.
+
+    Args:
+        name: Name of the rule.
+        src: Test source file (typically *.t.sol).
+        deps: Dependencies (other sol_library or sol_contract rules).
+        solc_version: Solidity compiler version. Defaults to plugin config.
+        solc_flags: Additional solc flags.
+        visibility: Visibility specification.
+        timeout: Test timeout in seconds.
+        labels: Additional labels for the test.
+    """
+    if solc_version is None:
+        solc_version = _get_default_solc_version()
+
+    contract = sol_contract(
+        name = f"_{name}#contract",
+        src = src,
+        deps = deps,
+        solc_version = solc_version,
+        solc_flags = solc_flags,
+        languages = [],
+        visibility = visibility,
+    )
+
+    # Gather solidity source files
+    sol_src_data = genrule(
+        name = f'_{name}#solsrcs',
+        srcs = [contract],
+        needs_transitive_deps = True,
+        output_is_complete = True,
+        requires = ['sol_srcs'],
+        out = f"{name}_solsrcdata",
+        cmd = "mv * $OUT | mkdir $OUT",
+        visibility = visibility,
+    )
+    data_package_root_dir = canonicalise(sol_src_data).removeprefix('//').split('/')[0]
+
+    # Gather the test's solidity compilation artifacts
+    sol_artifacts_data = genrule(
+        name = f'_{name}#solartifacts',
+        srcs = [contract],
+        requires = ['sol_artifacts'],
+        out = f"{name}_solartifactdata",
+        cmd = "mv $SRCS/* $OUT | mkdir $OUT",
+        visibility = visibility,
+    )
+
+    # SECURITY: Quote solc_version in test command
+    quoted_data_dir = _shell_quote(data_package_root_dir)
+    quoted_test_version = _shell_quote(solc_version)
+    return gentest(
+        name = name,
+        data = [sol_src_data, sol_artifacts_data],
+        sandbox = _get_sandbox(),
+        test_tools = [_get_forge_tool()],
+        test_cmd = '&&'.join([
+            f"mv $(location {sol_src_data}) src",
+            f"mv $(location {sol_artifacts_data}) out",
+            f"rm -r {quoted_data_dir}",
+            "mv src/* . && rmdir src",
+            f"$TOOL test --use {quoted_test_version} -vv $TEST_ARGS",
+        ]),
+        no_test_output = True,
+        timeout = timeout,
+        labels = labels,
+        visibility = visibility,
+    )
