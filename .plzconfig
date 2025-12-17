@@ -14,6 +14,18 @@ DefaultValue = ~/.foundry/bin/forge
 Help = Path or build label for the forge tool. Default assumes Foundry is installed via foundryup.
 Inherit = true
 
+[PluginConfig "svm_tool"]
+ConfigKey = SvmTool
+Help = Build label for the svm binary (from svm() rule). Used by solc() rule to download solc versions.
+Optional = true
+Inherit = true
+
+[PluginConfig "solc_tool"]
+ConfigKey = SolcTool
+Help = Build label for hermetic solc binary (from solc() rule). When set, sol_contract uses --solc flag for fully hermetic builds.
+Optional = true
+Inherit = true
+
 [PluginConfig "default_solc_version"]
 ConfigKey = DefaultSolcVersion
 DefaultValue = 0.8.20

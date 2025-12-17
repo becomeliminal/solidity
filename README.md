@@ -52,6 +52,31 @@ Target = //plugins:solidity
 ForgeTool = //third_party/binary:foundry|forge
 ```
 
+5. (Optional) Use hermetic solc via the svm rule:
+
+```python
+# In third_party/solidity/BUILD
+subinclude("///solidity//build_defs:solidity")
+
+svm(
+    name = "svm",
+    version = "0.5.22",
+)
+
+solc(
+    name = "solc_0.8.20",
+    version = "0.8.20",
+    svm_tool = ":svm",
+    visibility = ["PUBLIC"],
+)
+```
+
+```ini
+[Plugin "solidity"]
+Target = //plugins:solidity
+SolcTool = //third_party/solidity:solc_0.8.20
+```
+
 ## Usage
 
 ### Basic Contract
@@ -142,6 +167,8 @@ All options can be set in `.plzconfig` under `[Plugin "solidity"]`:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `ForgeTool` | `~/.foundry/bin/forge` | Path or build label for forge (assumes foundryup install) |
+| `SolcTool` | (none) | Build label for hermetic solc binary (from `solc()` rule) |
+| `SvmTool` | (none) | Build label for svm binary (from `svm()` rule) |
 | `DefaultSolcVersion` | `0.8.20` | Default Solidity version when not specified per-rule |
 | `AbigenTool` | (none) | Build label for abigen (required for Go bindings) |
 | `GoEthereumDep` | (none) | Build label for go-ethereum (required for Go bindings) |
@@ -149,7 +176,7 @@ All options can be set in `.plzconfig` under `[Plugin "solidity"]`:
 | `Optimize` | `true` | Enable Solidity optimizer |
 | `OptimizerRuns` | `100` | Number of optimizer runs |
 | `ImportRemappings` | (none) | Import path remappings (repeatable) |
-| `Sandbox` | `false` | Enable sandbox (requires pre-installed solc) |
+| `Sandbox` | `false` | Enable sandbox (requires hermetic solc) |
 
 ### Import Remappings
 
@@ -162,6 +189,31 @@ ImportRemappings = @account-abstraction/=third_party/solidity/account-abstractio
 ```
 
 ## Rule Reference
+
+### svm
+
+Downloads pre-built svm binary for managing solc versions hermetically.
+
+```python
+svm(
+    name = "svm",
+    version = "0.5.22",    # svm-rs release version
+    visibility = [],
+)
+```
+
+### solc
+
+Downloads a specific solc version using svm.
+
+```python
+solc(
+    name = "solc_0.8.20",
+    version = "0.8.20",     # Solidity version to download
+    svm_tool = ":svm",      # Build label for svm binary (optional if SvmTool configured)
+    visibility = [],
+)
+```
 
 ### sol_library
 
@@ -245,62 +297,6 @@ sol_test(
 3. **Go Bindings**: If configured, uses `abigen` to generate Go bindings from the compiled ABIs and bytecode.
 
 4. **Dependency Tracking**: The plugin uses Please's `requires` and `provides` mechanism to track transitive Solidity dependencies.
-
-## Security Considerations
-
-### Supply Chain Security with `sol_get`
-
-When using `sol_get()` to download third-party Solidity libraries, **always provide SHA256 hashes** to verify the download integrity:
-
-```python
-sol_get(
-    name = "openzeppelin-contracts",
-    repo = "OpenZeppelin/openzeppelin-contracts",
-    revision = "v5.0.0",
-    hashes = ["sha256:abc123..."],  # Get this from GitHub release
-    solc_version = "0.8.20",
-    visibility = ["PUBLIC"],
-)
-```
-
-**To get the hash:**
-```bash
-# Download and hash the ZIP
-curl -sL https://github.com/OpenZeppelin/openzeppelin-contracts/archive/v5.0.0.zip | sha256sum
-```
-
-Without hashes, a warning will be logged but the build will proceed. This is a trade-off between convenience and security - for production use, always specify hashes.
-
-### Sandbox Mode
-
-By default, sandbox mode is **disabled** (`Sandbox = false`) because:
-- Forge needs network access to download solc versions via svm
-- Forge needs access to `~/.svm` for the version cache
-
-**Security implications of `sandbox=false`:**
-- Build rules have full filesystem access
-- Build rules can make network requests
-- Malicious Solidity code or BUILD files could potentially exfiltrate data
-
-**Mitigations:**
-1. Only use trusted Solidity dependencies
-2. Use `hashes` parameter in `sol_get()` to verify downloads
-3. Review BUILD files in pull requests carefully
-4. Pre-install solc versions and enable sandbox mode for higher security:
-
-```bash
-# Pre-install solc versions
-svm install 0.8.20
-svm install 0.8.23
-
-# Enable sandbox in .plzconfig
-[Plugin "solidity"]
-Sandbox = true
-```
-
-### Input Validation
-
-All user inputs (contract names, versions, paths, etc.) are shell-quoted to prevent injection attacks. The plugin also validates that paths don't contain directory traversal sequences (`..`).
 
 ## License
 

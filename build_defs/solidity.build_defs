@@ -121,6 +121,140 @@ def _get_sandbox():
     return CONFIG.SOLIDITY.SANDBOX
 
 
+def _get_svm_tool():
+    """Returns the svm tool from config, or None if not configured."""
+    tool = CONFIG.SOLIDITY.SVM_TOOL
+    return tool if tool else None
+
+
+def _get_solc_tool():
+    """Returns the solc tool from config, or None if not configured."""
+    tool = CONFIG.SOLIDITY.SOLC_TOOL
+    return tool if tool else None
+
+
+# =============================================================================
+# HERMETIC TOOLCHAIN RULES
+# =============================================================================
+
+def svm(
+        name: str,
+        version: str,
+        os: str = None,
+        arch: str = None,
+        hashes: list = [],
+        visibility: list = [],
+):
+    """Downloads pre-built svm binary for managing solc versions hermetically.
+
+    svm (Solidity Version Manager) is a tool for installing and managing
+    multiple versions of the Solidity compiler.
+
+    Args:
+        name: Name of the rule.
+        version: svm-rs release version (e.g., "0.5.22").
+        os: Target OS. Defaults to current OS.
+        arch: Target architecture. Defaults to current arch.
+        hashes: Optional SHA256 hashes to verify download.
+        visibility: Visibility declaration.
+
+    Example:
+        svm(name = "svm", version = "0.5.22", visibility = ["PUBLIC"])
+        # Access via: //third_party/solidity:svm
+    """
+    if not os:
+        if CONFIG.OS == 'linux':
+            os = 'linux'
+        elif CONFIG.OS == 'darwin':
+            os = 'darwin'
+        else:
+            fail(f'Unknown OS {CONFIG.OS}')
+
+    if not arch:
+        if CONFIG.ARCH == 'amd64':
+            arch = 'amd64'
+        elif CONFIG.ARCH == 'arm64':
+            arch = 'arm64'
+        else:
+            fail(f'Unknown architecture {CONFIG.ARCH}')
+
+    # Map to svm-rs platform naming
+    platform_map = {
+        ('darwin', 'arm64'): 'aarch64-apple-darwin',
+        ('darwin', 'amd64'): 'x86_64-apple-darwin',
+        ('linux', 'arm64'): 'aarch64-unknown-linux-gnu',
+        ('linux', 'amd64'): 'x86_64-unknown-linux-gnu',
+    }
+    platform = platform_map.get((os, arch))
+    if not platform:
+        fail(f'Unsupported platform: {os}_{arch}')
+
+    url = f"https://github.com/alloy-rs/svm-rs/releases/download/v{version}/svm-rs-{platform}.tar.gz"
+
+    download = remote_file(
+        name = f"_{name}#download",
+        url = url,
+        hashes = hashes,
+    )
+
+    return build_rule(
+        name = name,
+        srcs = [download],
+        outs = ["svm"],
+        cmd = "tar -xzf $SRC && mv svm $OUT",
+        binary = True,
+        visibility = visibility,
+        building_description = f"Extracting svm v{version} for {platform}...",
+    )
+
+
+def solc(
+        name: str,
+        version: str,
+        svm_tool: str = "",
+        visibility: list = [],
+):
+    """Downloads a specific solc version using svm.
+
+    This rule uses svm to download and install a specific version of the
+    Solidity compiler. The resulting binary can be used with sol_contract's
+    solc_tool parameter for fully hermetic builds.
+
+    Args:
+        name: Name of the rule.
+        version: Solidity version to download (e.g., "0.8.20").
+        svm_tool: Build label for svm binary. If not provided, uses SvmTool from config.
+        visibility: Visibility declaration.
+
+    Example:
+        solc(name = "solc_0.8.20", version = "0.8.20", svm_tool = ":svm")
+        # Access via: //third_party/solidity:solc_0.8.20
+    """
+    svm = svm_tool if svm_tool else _get_svm_tool()
+    if not svm:
+        fail("solc() requires svm_tool parameter or SvmTool config option")
+
+    quoted_version = _shell_quote(version)
+
+    return genrule(
+        name = name,
+        tools = {"svm": svm},
+        outs = ["solc"],
+        # svm install downloads to ~/.svm/version/solc-version
+        # We copy it out to make it hermetic
+        cmd = f"""
+            export SVM_HOME=$TMP_DIR/.svm
+            $TOOLS_SVM install {quoted_version}
+            cp $SVM_HOME/{version}/solc-{version} $OUT
+            chmod +x $OUT
+        """,
+        binary = True,
+        sandbox = False,  # Needs network to download solc
+        visibility = visibility,
+        building_description = f"Downloading solc {version}...",
+    )
+
+
 # =============================================================================
 # BUILD RULES
 # =============================================================================
@@ -179,6 +313,7 @@ def sol_contract(
         src: str,
         deps: list = [],
         solc_version: str = None,
+        solc_tool: str = "",
         solc_flags: str = '',
         contract_names: list = [],
         skip: list = [],
@@ -197,8 +332,11 @@ def sol_contract(
         name: Name of the rule.
         src: Solidity source file or directory.
         deps: Dependencies (other sol_library or sol_contract rules).
-        solc_version: Solidity compiler version (e.g., "0.8.20"). Uses svm to download.
-            Defaults to the plugin's default_solc_version config.
+        solc_version: Solidity compiler version (e.g., "0.8.20"). Used with forge's
+            --use flag to download via svm. Defaults to DefaultSolcVersion config.
+        solc_tool: Build label for hermetic solc binary (from solc() rule).
+            When provided, uses forge's --solc flag for fully hermetic builds.
+            Takes precedence over solc_version.
         solc_flags: Additional flags for solc/forge.
         contract_names: Names of contracts in the source file. Required for
             multi-contract files when generating language bindings.
@@ -248,7 +386,10 @@ def sol_contract(
     )
 
     # Get forge tool from config
-    solc_tool = _get_forge_tool()
+    forge_tool = _get_forge_tool()
+
+    # Check for hermetic solc - parameter takes precedence over config
+    hermetic_solc = solc_tool if solc_tool else _get_solc_tool()
 
     # Build skip flags for contracts to exclude (SECURITY: quote each item)
     skip_cmd = ""
@@ -273,22 +414,30 @@ def sol_contract(
         all_flags += " " + quoted_solc_flags
 
     # Build the forge command
-    # SECURITY: Quote solc_version
-    quoted_solc_version = _shell_quote(solc_version)
+    # Use --solc for hermetic solc binary, --use for svm-based version download
     setup_cmd = 'mkdir -p src && ([ -d "$SRCS" ] && cp -r "$SRCS"/* src/ 2>/dev/null || cp "$SRCS" src/ 2>/dev/null)'
-    solc_cmd = f'build --use {quoted_solc_version} {skip_cmd} {all_flags} --extra-output bin --extra-output-files bin --root . || [ -d out ]'
+    if hermetic_solc:
+        # Hermetic mode: use --solc to point to pre-built solc binary
+        solc_cmd = f'build --solc $TOOLS_SOLC {skip_cmd} {all_flags} --extra-output bin --extra-output-files bin --root . || [ -d out ]'
+    else:
+        # Non-hermetic mode: use --use to download via svm
+        quoted_solc_version = _shell_quote(solc_version)
+        solc_cmd = f'build --use {quoted_solc_version} {skip_cmd} {all_flags} --extra-output bin --extra-output-files bin --root . || [ -d out ]'
 
     # Extract ABIs and bytecode from JSON files
     abi_bin_extract = 'if [ -d out ]; then for json_file in $(find out -name "*.json" -type f 2>/dev/null); do jq ".abi" "$json_file" > "${json_file%.json}.abi" 2>/dev/null || true; jq -r ".bytecode.object // .bytecode" "$json_file" | sed "s/^0x//" > "${json_file%.json}.bin" 2>/dev/null || true; done; fi'
+
+    # Build tools dict - add solc if using hermetic mode
+    build_tools = {"forge": forge_tool}
+    if hermetic_solc:
+        build_tools["solc"] = hermetic_solc
 
     forge_build = genrule(
         name = f"_{name}#forge_build",
         srcs = [src],
         deps = deps,
         requires = ['sol_srcs'],
-        tools = {
-            "forge": solc_tool,
-        },
+        tools = build_tools,
         out = f"{name}_out",
         needs_transitive_deps = True,
         output_is_complete = True,
@@ -383,6 +532,7 @@ def sol_get(
         hashes: list = [],
         deps: list = [],
         solc_version: str = None,
+        solc_tool: str = "",
         package: str = '.',
         install: list = ['.'],
         solc_flags: str = '',
@@ -397,17 +547,15 @@ def sol_get(
     This rule downloads Solidity source code from a GitHub repository,
     applies import path remappings, and compiles it using sol_contract.
 
-    SECURITY: For supply chain security, provide SHA256 hashes to verify downloads.
-    Without hashes, a warning will be logged but the build will proceed.
-
     Args:
         name: Name of the rule.
         repo: GitHub repo in 'org/repo' format (e.g., 'OpenZeppelin/openzeppelin-contracts').
         revision: Git revision (commit SHA, tag, or branch).
         hashes: SHA256 hashes for download verification. Format: ["sha256:abc123..."]
-            Strongly recommended for security - verifies the download hasn't been tampered with.
+            Strongly recommended - verifies the download hasn't been tampered with.
         deps: Dependencies (other sol_library or sol_contract rules).
         solc_version: Solidity compiler version. Defaults to plugin config.
+        solc_tool: Build label for hermetic solc binary (from solc() rule).
         package: Subdirectory within the repo containing sources.
         install: List of subdirectories to install from the package.
         solc_flags: Additional solc flags.
@@ -472,6 +620,7 @@ def sol_get(
         src = extract_rule,
         deps = deps,
         solc_version = solc_version,
+        solc_tool = solc_tool,
         solc_flags = solc_flags,
         contract_names = contract_names,
         skip = skip,
@@ -487,6 +636,7 @@ def sol_test(
         src: str,
         deps: list = [],
         solc_version: str = None,
+        solc_tool: str = "",
         solc_flags: str = '',
         visibility: list = [],
         timeout: int = 0,
@@ -501,6 +651,7 @@ def sol_test(
         src: Test source file (typically *.t.sol).
         deps: Dependencies (other sol_library or sol_contract rules).
         solc_version: Solidity compiler version. Defaults to plugin config.
+        solc_tool: Build label for hermetic solc binary (from solc() rule).
         solc_flags: Additional solc flags.
         visibility: Visibility specification.
         timeout: Test timeout in seconds.
@@ -509,11 +660,15 @@ def sol_test(
     if solc_version is None:
         solc_version = _get_default_solc_version()
 
+    # Check for hermetic solc - parameter takes precedence over config
+    hermetic_solc = solc_tool if solc_tool else _get_solc_tool()
+
     contract = sol_contract(
         name = f"_{name}#contract",
         src = src,
         deps = deps,
         solc_version = solc_version,
+        solc_tool = solc_tool,
         solc_flags = solc_flags,
         languages = [],
         visibility = visibility,
@@ -542,21 +697,35 @@ def sol_test(
         visibility = visibility,
     )
 
-    # SECURITY: Quote solc_version in test command
+    # Build test command based on hermetic vs non-hermetic mode
     quoted_data_dir = _shell_quote(data_package_root_dir)
-    quoted_test_version = _shell_quote(solc_version)
+    base_cmds = [
+        f"mv $(location {sol_src_data}) src",
+        f"mv $(location {sol_artifacts_data}) out",
+        f"rm -r {quoted_data_dir}",
+        "mv src/* . && rmdir src",
+    ]
+
+    if hermetic_solc:
+        # Hermetic mode: use --solc to point to pre-built solc binary
+        test_tools = {"forge": _get_forge_tool(), "solc": hermetic_solc}
+        test_cmd = '&&'.join(base_cmds + [
+            "$TOOLS_FORGE test --solc $TOOLS_SOLC -vv $TEST_ARGS",
+        ])
+    else:
+        # Non-hermetic mode: use --use to download via svm
+        quoted_test_version = _shell_quote(solc_version)
+        test_tools = {"forge": _get_forge_tool()}
+        test_cmd = '&&'.join(base_cmds + [
+            f"$TOOLS_FORGE test --use {quoted_test_version} -vv $TEST_ARGS",
+        ])
+
     return gentest(
         name = name,
         data = [sol_src_data, sol_artifacts_data],
         sandbox = _get_sandbox(),
-        test_tools = [_get_forge_tool()],
-        test_cmd = '&&'.join([
-            f"mv $(location {sol_src_data}) src",
-            f"mv $(location {sol_artifacts_data}) out",
-            f"rm -r {quoted_data_dir}",
-            "mv src/* . && rmdir src",
-            f"$TOOL test --use {quoted_test_version} -vv $TEST_ARGS",
-        ]),
+        test_tools = test_tools,
+        test_cmd = test_cmd,
         no_test_output = True,
         timeout = timeout,
         labels = labels,
