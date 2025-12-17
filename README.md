@@ -119,12 +119,28 @@ go_binary(
 sol_get(
     name = "openzeppelin-contracts",
     repo = "OpenZeppelin/openzeppelin-contracts",
-    revision = "v5.0.0",
+    revision = "v5.0.2",
     package = "contracts",
-    install = ["token/ERC20", "access"],
-    solc_version = "0.8.20",
+    install = ["."],  # Install all (needed for internal relative imports)
     visibility = ["PUBLIC"],
 )
+
+sol_contract(
+    name = "mytoken",
+    src = "MyToken.sol",
+    solc_version = "0.8.20",
+    deps = [":openzeppelin-contracts"],
+)
+```
+
+Then in `MyToken.sol` (import prefix defaults to `{name}/`):
+
+```solidity
+import "openzeppelin-contracts/token/ERC20/ERC20.sol";
+
+contract MyToken is ERC20 {
+    constructor() ERC20("MyToken", "MTK") {}
+}
 ```
 
 ### Running Tests
@@ -176,18 +192,7 @@ All options can be set in `.plzconfig` under `[Plugin "solidity"]`:
 | `DefaultLanguages` | `go` | Default output languages for sol_contract |
 | `Optimize` | `true` | Enable Solidity optimizer |
 | `OptimizerRuns` | `100` | Number of optimizer runs |
-| `ImportRemappings` | (none) | Import path remappings (repeatable) |
 | `Sandbox` | `false` | Enable sandbox (requires local solc) |
-
-### Import Remappings
-
-Configure import path remappings for third-party dependencies:
-
-```ini
-[Plugin "solidity"]
-ImportRemappings = @openzeppelin/contracts/=third_party/solidity/openzeppelin-contracts/
-ImportRemappings = @account-abstraction/=third_party/solidity/account-abstraction/
-```
 
 ## Rule Reference
 
@@ -250,25 +255,23 @@ sol_contract(
 
 ### sol_get
 
-Downloads Solidity from GitHub and compiles it.
+Downloads Solidity libraries from GitHub. Import remappings are automatically generated.
 
 ```python
 sol_get(
-    name = "lib",
-    repo = "org/repo",       # GitHub repo
-    revision = "v1.0.0",     # Git revision (prefer commit SHA)
+    name = "openzeppelin-contracts",
+    repo = "OpenZeppelin/openzeppelin-contracts",
+    revision = "v5.0.2",     # Git revision (prefer commit SHA)
     hashes = [],             # SHA256 hashes for verification (recommended!)
-    deps = [],
-    solc_version = "0.8.20",
-    package = ".",           # Source directory in repo
+    import_prefix = "",      # Defaults to "{name}/" (e.g., "openzeppelin-contracts/")
+    package = "contracts",   # Source directory in repo
     install = ["."],         # Subdirectories to install
-    solc_flags = "",
-    contract_names = [],
-    skip = [],
-    languages = ["go"],
-    test_only = False,
+    deps = [],               # Other sol_get dependencies
     visibility = [],
 )
+
+# Then in your contract:
+# import "openzeppelin-contracts/token/ERC20/ERC20.sol";
 ```
 
 ### sol_test

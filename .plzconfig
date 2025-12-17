@@ -64,13 +64,6 @@ DefaultValue = 100
 Help = Number of optimizer runs
 Inherit = true
 
-[PluginConfig "import_remappings"]
-ConfigKey = ImportRemappings
-Repeatable = true
-Optional = true
-Help = Import path remappings in the format 'from=to' (e.g., '@openzeppelin/contracts/=third_party/solidity/openzeppelin-contracts/')
-Inherit = true
-
 [PluginConfig "sandbox"]
 ConfigKey = Sandbox
 DefaultValue = false

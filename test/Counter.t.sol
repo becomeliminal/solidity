@@ -31,7 +31,8 @@ contract CounterTest is Test {
         assertEq(counter.count(), 42);
     }
 
-    function testFail_DecrementBelowZero() public {
+    function test_RevertWhen_DecrementBelowZero() public {
+        vm.expectRevert();
         counter.decrement();
     }
 

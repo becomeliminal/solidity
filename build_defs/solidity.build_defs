@@ -105,17 +105,6 @@ def _get_optimizer_settings():
     return optimize, runs
 
 
-def _get_import_remappings():
-    """Returns import remappings from config as a dict."""
-    remappings = CONFIG.SOLIDITY.IMPORT_REMAPPINGS or []
-    result = {}
-    for mapping in remappings:
-        if '=' in mapping:
-            from_path, to_path = mapping.split('=', 1)
-            result[from_path] = to_path
-    return result
-
-
 def _get_sandbox():
     """Returns whether to use sandbox from config."""
     return CONFIG.SOLIDITY.SANDBOX
@@ -416,14 +405,17 @@ def sol_contract(
 
     # Build the forge command
     # --use accepts version strings OR paths to local solc binaries
-    setup_cmd = 'mkdir -p src && ([ -d "$SRCS" ] && cp -r "$SRCS"/* src/ 2>/dev/null || cp "$SRCS" src/ 2>/dev/null)'
+    # Copy main source and any dep .sol files from the same package to src/
+    # This enables relative imports like "./Counter.sol" to work
+    pkg = package_name()
+    setup_cmd = f'mkdir -p src && ([ -d "$SRCS" ] && cp -r "$SRCS"/* src/ 2>/dev/null || cp "$SRCS" src/ 2>/dev/null) && (find {pkg} -maxdepth 1 -name "*.sol" -exec cp {{}} src/ \\; 2>/dev/null || true)'
     if local_solc:
         # Use --use with path to local solc binary
-        solc_cmd = f'build --use $TOOLS_SOLC {skip_cmd} {all_flags} --extra-output bin --extra-output-files bin --root . || [ -d out ]'
+        solc_cmd = f'build --use $TOOLS_SOLC {skip_cmd} {all_flags} --extra-output bin --extra-output-files bin --root .'
     else:
         # Use --use with version string to download via svm
         quoted_solc_version = _shell_quote(solc_version)
-        solc_cmd = f'build --use {quoted_solc_version} {skip_cmd} {all_flags} --extra-output bin --extra-output-files bin --root . || [ -d out ]'
+        solc_cmd = f'build --use {quoted_solc_version} {skip_cmd} {all_flags} --extra-output bin --extra-output-files bin --root .'
 
     # Extract ABIs and bytecode from JSON files
     abi_bin_extract = 'if [ -d out ]; then for json_file in $(find out -name "*.json" -type f 2>/dev/null); do jq ".abi" "$json_file" > "${json_file%.json}.abi" 2>/dev/null || true; jq -r ".bytecode.object // .bytecode" "$json_file" | sed "s/^0x//" > "${json_file%.json}.bin" 2>/dev/null || true; done; fi'
@@ -433,17 +425,21 @@ def sol_contract(
     if local_solc:
         build_tools["solc"] = local_solc
 
+    # Collect remappings from deps and build --remappings flag
+    # Remapping files contain lines like "@openzeppelin/contracts/=openzeppelin-contracts/"
+    collect_remappings = 'REMAPPINGS=""; for f in $(find . -name "*.remapping" 2>/dev/null); do while read line; do REMAPPINGS="$REMAPPINGS --remappings $line"; done < "$f"; done'
+
     forge_build = genrule(
         name = f"_{name}#forge_build",
         srcs = [src],
         deps = deps,
-        requires = ['sol_srcs'],
+        requires = ['sol_srcs', 'sol_remappings'],
         tools = build_tools,
         out = f"{name}_out",
         needs_transitive_deps = True,
         output_is_complete = True,
         sandbox = _get_sandbox(),
-        cmd = f'{setup_cmd} && $TOOLS_FORGE {solc_cmd} && {abi_bin_extract} && mkdir -p $OUT && ([ -d out ] && mv out/* $OUT || mkdir -p $OUT)',
+        cmd = f'{collect_remappings} && {setup_cmd} && $TOOLS_FORGE {solc_cmd} $REMAPPINGS || [ -d out ] && {abi_bin_extract} && mkdir -p $OUT && ([ -d out ] && mv out/* $OUT || mkdir -p $OUT)',
         test_only = test_only,
     )
     plugins = {'sol_artifacts': forge_build}
@@ -532,6 +528,7 @@ def sol_get(
         revision: str,
         hashes: list = [],
         deps: list = [],
+        import_prefix: str = "",
         solc_version: str = None,
         package: str = '.',
         install: list = ['.'],
@@ -544,8 +541,9 @@ def sol_get(
 ):
     """Downloads a Solidity library from GitHub and compiles it.
 
-    This rule downloads Solidity source code from a GitHub repository,
-    applies import path remappings, and compiles it using sol_contract.
+    This rule downloads Solidity source code from a GitHub repository
+    and compiles it using sol_contract. Import remappings are automatically
+    generated based on the import_prefix.
 
     Args:
         name: Name of the rule.
@@ -554,6 +552,9 @@ def sol_get(
         hashes: SHA256 hashes for download verification. Format: ["sha256:abc123..."]
             Strongly recommended - verifies the download hasn't been tampered with.
         deps: Dependencies (other sol_library or sol_contract rules).
+        import_prefix: Import path prefix for this library. Defaults to "{name}/".
+            Example: "@openzeppelin/contracts/" allows imports like
+            `import "@openzeppelin/contracts/token/ERC20/ERC20.sol";`
         solc_version: Solidity compiler version. Defaults to plugin config.
         package: Subdirectory within the repo containing sources.
         install: List of subdirectories to install from the package.
@@ -569,6 +570,10 @@ def sol_get(
     for install_path in install:
         _validate_no_traversal(install_path, "install")
 
+    # Default import_prefix to name/
+    if not import_prefix:
+        import_prefix = name + "/"
+
     org, _, repo_name = repo.partition('/')
 
     # SECURITY: Log warning if no hash verification
@@ -581,29 +586,26 @@ def sol_get(
         hashes = hashes,
     )
 
-    # Get import remappings from config
-    remappings = _get_import_remappings()
-
     # SECURITY: Quote all path components
+    # GitHub strips 'v' prefix from version tags in archive directory names
+    # e.g., v1.9.4 becomes forge-std-1.9.4/ not forge-std-v1.9.4/
+    archive_revision = revision.lstrip('v') if revision.startswith('v') else revision
+    quoted_archive_revision = _shell_quote(archive_revision)
+
     cmds = [f'$TOOL x $SRCS -o tmp && mkdir $OUTS']
     for install_path in install:
         quoted_install = _shell_quote(install_path)
         quoted_package = _shell_quote(package)
-        quoted_revision = _shell_quote(revision)
 
-        if install_path != ".":
+        if install_path == ".":
+            # Copy entire package contents preserving structure
+            cmds.append(f'cp -r tmp/$OUTS-{quoted_archive_revision}/{quoted_package}/* $OUTS/')
+        else:
+            # Copy specific subdirectory
             cmds.append(f'mkdir -p $OUTS/{quoted_install}')
-        cmds.append("&&".join([
-            f'mv tmp/$OUTS-{quoted_revision}/{quoted_package}/{quoted_install}/*.sol $OUTS/{quoted_install} && rm -rf $OUTS/{quoted_install}/*.t.sol',
-        ]))
-
-        # SECURITY: Use escaped sed patterns
-        for from_path, to_path in remappings.items():
-            from_escaped = _escape_sed_pattern(from_path)
-            to_escaped = _escape_sed_pattern(to_path)
-            cmds.append("&&".join([
-                f"cd $OUTS/{quoted_install} && for FILE in *; do cat $FILE | sed 's/{from_escaped}/{to_escaped}/g' > \"$FILE.bak\"; rm -rf $FILE; mv \"$FILE.bak\" $FILE; done && cd -",
-            ]))
+            cmds.append(f'cp -r tmp/$OUTS-{quoted_archive_revision}/{quoted_package}/{quoted_install}/* $OUTS/{quoted_install}/')
+        # Remove test files
+        cmds.append(f'find $OUTS -name "*.t.sol" -delete 2>/dev/null || true')
 
     extract_rule = build_rule(
         name = f"_{name}#extract",
@@ -614,9 +616,22 @@ def sol_get(
         visibility = visibility,
     )
 
-    sol_contract(
+    # Create remapping file: import_prefix=package/name/
+    # This tells forge to resolve imports like "@openzeppelin/contracts/X" to "third_party/openzeppelin-contracts/X"
+    # The package path prefix is needed because Please organizes dep files by package
+    pkg = package_name()
+    remapping_rule = genrule(
+        name = f"_{name}#remapping",
+        cmd = f'echo "{import_prefix}={pkg}/{name}/" > $OUT',
+        outs = [f"{name}.remapping"],
+        test_only = test_only,
+    )
+
+    # Create sol_library with remapping provider
+    _sol_get_library(
         name = name,
         src = extract_rule,
+        remapping = remapping_rule,
         deps = deps,
         solc_version = solc_version,
         solc_flags = solc_flags,
@@ -625,7 +640,64 @@ def sol_get(
         languages = languages,
         test_only = test_only,
         visibility = visibility,
-        _is_dir = True,
+    )
+
+
+def _sol_get_library(
+        name: str,
+        src,
+        remapping,
+        deps: list = [],
+        solc_version: str = None,
+        solc_flags: str = '',
+        contract_names: list = [],
+        skip: list = [],
+        languages: list = None,
+        test_only: bool = False,
+        visibility: list = [],
+):
+    """Internal helper for sol_get that creates the library with remapping support."""
+    # Apply defaults from config
+    if solc_version is None:
+        solc_version = _get_default_solc_version()
+    if languages is None:
+        languages = _get_default_languages()
+
+    # Create the solidity source filegroup
+    solidity_rule = filegroup(
+        name = f'_{name}#solidity',
+        srcs = [src],
+        visibility = visibility,
+        exported_deps = deps,
+        requires = ['sol_srcs'],
+        output_is_complete = False,
+        test_only = test_only,
+    )
+
+    # Create remapping filegroup that collects all remappings from deps
+    remapping_fg = filegroup(
+        name = f'_{name}#remappings',
+        srcs = [remapping],
+        visibility = visibility,
+        exported_deps = deps,
+        requires = ['sol_remappings'],
+        output_is_complete = False,
+        test_only = test_only,
+    )
+
+    provides = {
+        'sol_srcs': solidity_rule,
+        'sol_remappings': remapping_fg,
+    }
+
+    return filegroup(
+        name = name,
+        srcs = [src],
+        deps = [solidity_rule, remapping_fg],
+        provides = provides,
+        visibility = visibility,
+        output_is_complete = False,
+        test_only = test_only,
     )
 
 
@@ -669,18 +741,22 @@ def sol_test(
         visibility = visibility,
     )
 
-    # Gather solidity source files
+    # Gather solidity source files from contract and its deps
     sol_src_data = genrule(
         name = f'_{name}#solsrcs',
         srcs = [contract],
+        deps = deps,  # Include test deps so their sol_srcs are collected
         needs_transitive_deps = True,
         output_is_complete = True,
         requires = ['sol_srcs'],
         out = f"{name}_solsrcdata",
-        cmd = "mv * $OUT | mkdir $OUT",
+        cmd = "mkdir -p $OUT && mv * $OUT 2>/dev/null || true",
         visibility = visibility,
     )
-    data_package_root_dir = canonicalise(sol_src_data).removeprefix('//').split('/')[0]
+    # Get the package directory (e.g., "test" from "//test:_counter_test#solsrcs")
+    canonical_path = canonicalise(sol_src_data).removeprefix('//')
+    pkg_path = canonical_path.split(':')[0]
+    data_package_root_dir = pkg_path.split('/')[0]
 
     # Gather the test's solidity compilation artifacts
     sol_artifacts_data = genrule(
@@ -688,16 +764,33 @@ def sol_test(
         srcs = [contract],
         requires = ['sol_artifacts'],
         out = f"{name}_solartifactdata",
-        cmd = "mv $SRCS/* $OUT | mkdir $OUT",
+        cmd = "mkdir -p $OUT && mv $SRCS/* $OUT",
+        visibility = visibility,
+    )
+
+    # Gather remappings from deps
+    sol_remapping_data = genrule(
+        name = f'_{name}#remappings',
+        srcs = [contract],
+        deps = deps,
+        needs_transitive_deps = True,
+        requires = ['sol_remappings'],
+        out = f"{name}_remappings",
+        cmd = 'mkdir -p $OUT && find . -name "*.remapping" -exec cp {} $OUT/ \\; 2>/dev/null || true',
         visibility = visibility,
     )
 
     # Build test command
     quoted_data_dir = _shell_quote(data_package_root_dir)
+
+    # Collect remappings for forge test
+    collect_remappings = f'REMAPPINGS=""; for f in $(find $(location {sol_remapping_data}) -name "*.remapping" 2>/dev/null); do while read line; do REMAPPINGS="$REMAPPINGS --remappings $line"; done < "$f"; done'
+
     base_cmds = [
+        collect_remappings,
         f"mv $(location {sol_src_data}) src",
         f"mv $(location {sol_artifacts_data}) out",
-        f"rm -r {quoted_data_dir}",
+        f"rm -r {quoted_data_dir} 2>/dev/null || true",
         "mv src/* . && rmdir src",
     ]
 
@@ -705,19 +798,19 @@ def sol_test(
         # Use --use with path to local solc binary
         test_tools = {"forge": _get_forge_tool(), "solc": local_solc}
         test_cmd = '&&'.join(base_cmds + [
-            "$TOOLS_FORGE test --use $TOOLS_SOLC -vv $TEST_ARGS",
+            "$TOOLS_FORGE test --root . --use $TOOLS_SOLC -vv $REMAPPINGS $TEST_ARGS",
         ])
     else:
         # Use --use with version string to download via svm
         quoted_test_version = _shell_quote(solc_version)
         test_tools = {"forge": _get_forge_tool()}
         test_cmd = '&&'.join(base_cmds + [
-            f"$TOOLS_FORGE test --use {quoted_test_version} -vv $TEST_ARGS",
+            f"$TOOLS_FORGE test --root . --use {quoted_test_version} -vv $REMAPPINGS $TEST_ARGS",
         ])
 
     return gentest(
         name = name,
-        data = [sol_src_data, sol_artifacts_data],
+        data = [sol_src_data, sol_artifacts_data, sol_remapping_data],
         sandbox = _get_sandbox(),
         test_tools = test_tools,
         test_cmd = test_cmd,

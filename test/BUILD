@@ -14,6 +14,26 @@ solc(
     visibility = ["PUBLIC"],
 )
 
+# Forge standard library - tests automatic import remappings
+sol_get(
+    name = "forge-std",
+    repo = "foundry-rs/forge-std",
+    revision = "v1.9.4",
+    import_prefix = "forge-std/",
+    package = "src",
+    visibility = ["PUBLIC"],
+)
+
+# OpenZeppelin - tests default import_prefix (should be "openzeppelin-contracts/")
+sol_get(
+    name = "openzeppelin-contracts",
+    repo = "OpenZeppelin/openzeppelin-contracts",
+    revision = "v5.0.2",
+    package = "contracts",
+    install = ["."],  # Install all to get interfaces, utils, etc.
+    visibility = ["PUBLIC"],
+)
+
 # Test sol_contract (uses default version download or SolcTool if configured)
 sol_contract(
     name = "counter",
@@ -24,10 +44,20 @@ sol_contract(
     visibility = ["PUBLIC"],
 )
 
+# Test contract using OpenZeppelin with default import_prefix
+sol_contract(
+    name = "mytoken",
+    src = "MyToken.sol",
+    solc_version = "0.8.20",
+    deps = [":openzeppelin-contracts"],
+    languages = [],
+    visibility = ["PUBLIC"],
+)
+
 # Test sol_test
 sol_test(
     name = "counter_test",
     src = "Counter.t.sol",
     solc_version = "0.8.20",
-    deps = [":counter"],
+    deps = [":counter", ":forge-std"],
 )
