@@ -77,3 +77,10 @@ DefaultValue = false
 Type = bool
 Help = Enable sandbox for forge builds. Disabled by default because forge needs access to ~/.svm for solc versions.
 Inherit = true
+
+# ============================================================
+# TEST CONFIGURATION (for plugin development testing)
+# ============================================================
+
+[Plugin "solidity"]
+SvmTool = //test:svm

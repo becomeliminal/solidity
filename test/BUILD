@@ -7,15 +7,14 @@ svm(
     visibility = ["PUBLIC"],
 )
 
-# Test solc rule (uses svm to download solc)
+# Test solc rule (requires SvmTool config - see .plzconfig)
 solc(
     name = "solc_0.8.20",
     version = "0.8.20",
-    svm_tool = ":svm",
     visibility = ["PUBLIC"],
 )
 
-# Test sol_contract (uses default version download)
+# Test sol_contract (uses default version download or SolcTool if configured)
 sol_contract(
     name = "counter",
     src = "Counter.sol",
@@ -25,28 +24,10 @@ sol_contract(
     visibility = ["PUBLIC"],
 )
 
-# Test sol_contract with local solc
-sol_contract(
-    name = "counter_local",
-    src = "Counter.sol",
-    solc_tool = ":solc_0.8.20",
-    contract_names = ["Counter"],
-    languages = [],
-    visibility = ["PUBLIC"],
-)
-
-# Test sol_test (uses default version download)
+# Test sol_test
 sol_test(
     name = "counter_test",
     src = "Counter.t.sol",
     solc_version = "0.8.20",
     deps = [":counter"],
-)
-
-# Test sol_test with local solc
-sol_test(
-    name = "counter_test_local",
-    src = "Counter.t.sol",
-    solc_tool = ":solc_0.8.20",
-    deps = [":counter_local"],
 )

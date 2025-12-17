@@ -212,28 +212,29 @@ def svm(
 def solc(
         name: str,
         version: str,
-        svm_tool: str = "",
         visibility: list = [],
 ):
     """Downloads a specific solc version using svm.
 
     This rule uses svm to download and install a specific version of the
-    Solidity compiler. The resulting binary can be used with sol_contract's
-    solc_tool parameter.
+    Solidity compiler. Configure SvmTool in .plzconfig to point to the svm binary.
 
     Args:
         name: Name of the rule.
         version: Solidity version to download (e.g., "0.8.20").
-        svm_tool: Build label for svm binary. If not provided, uses SvmTool from config.
         visibility: Visibility declaration.
 
     Example:
-        solc(name = "solc_0.8.20", version = "0.8.20", svm_tool = ":svm")
-        # Access via: //third_party/solidity:solc_0.8.20
+        # .plzconfig
+        [Plugin "solidity"]
+        SvmTool = //third_party/solidity:svm
+
+        # BUILD
+        solc(name = "solc_0.8.20", version = "0.8.20")
     """
-    svm = svm_tool if svm_tool else _get_svm_tool()
+    svm = _get_svm_tool()
     if not svm:
-        fail("solc() requires svm_tool parameter or SvmTool config option")
+        fail("solc() requires SvmTool config option in .plzconfig")
 
     quoted_version = _shell_quote(version)
 
@@ -314,7 +315,6 @@ def sol_contract(
         src: str,
         deps: list = [],
         solc_version: str = None,
-        solc_tool: str = "",
         solc_flags: str = '',
         contract_names: list = [],
         skip: list = [],
@@ -329,15 +329,15 @@ def sol_contract(
     Solidity contracts, extracts ABIs and bytecode, and optionally generates
     language bindings (currently Go via abigen).
 
+    If SolcTool is configured in .plzconfig, uses the local solc binary.
+    Otherwise, uses forge's --use flag to download via svm.
+
     Args:
         name: Name of the rule.
         src: Solidity source file or directory.
         deps: Dependencies (other sol_library or sol_contract rules).
-        solc_version: Solidity compiler version (e.g., "0.8.20"). Used with forge's
-            --use flag to download via svm. Defaults to DefaultSolcVersion config.
-        solc_tool: Build label for solc binary (from solc() rule).
-            When provided, uses the local solc instead of downloading via svm.
-            Takes precedence over solc_version.
+        solc_version: Solidity compiler version (e.g., "0.8.20"). Used when
+            downloading via svm. Defaults to DefaultSolcVersion config.
         solc_flags: Additional flags for solc/forge.
         contract_names: Names of contracts in the source file. Required for
             multi-contract files when generating language bindings.
@@ -389,8 +389,8 @@ def sol_contract(
     # Get forge tool from config
     forge_tool = _get_forge_tool()
 
-    # Check for local solc - parameter takes precedence over config
-    local_solc = solc_tool if solc_tool else _get_solc_tool()
+    # Check for local solc from config
+    local_solc = _get_solc_tool()
 
     # Build skip flags for contracts to exclude (SECURITY: quote each item)
     skip_cmd = ""
@@ -533,7 +533,6 @@ def sol_get(
         hashes: list = [],
         deps: list = [],
         solc_version: str = None,
-        solc_tool: str = "",
         package: str = '.',
         install: list = ['.'],
         solc_flags: str = '',
@@ -556,7 +555,6 @@ def sol_get(
             Strongly recommended - verifies the download hasn't been tampered with.
         deps: Dependencies (other sol_library or sol_contract rules).
         solc_version: Solidity compiler version. Defaults to plugin config.
-        solc_tool: Build label for solc binary (from solc() rule).
         package: Subdirectory within the repo containing sources.
         install: List of subdirectories to install from the package.
         solc_flags: Additional solc flags.
@@ -621,7 +619,6 @@ def sol_get(
         src = extract_rule,
         deps = deps,
         solc_version = solc_version,
-        solc_tool = solc_tool,
         solc_flags = solc_flags,
         contract_names = contract_names,
         skip = skip,
@@ -637,7 +634,6 @@ def sol_test(
         src: str,
         deps: list = [],
         solc_version: str = None,
-        solc_tool: str = "",
         solc_flags: str = '',
         visibility: list = [],
         timeout: int = 0,
@@ -652,7 +648,6 @@ def sol_test(
         src: Test source file (typically *.t.sol).
         deps: Dependencies (other sol_library or sol_contract rules).
         solc_version: Solidity compiler version. Defaults to plugin config.
-        solc_tool: Build label for solc binary (from solc() rule).
         solc_flags: Additional solc flags.
         visibility: Visibility specification.
         timeout: Test timeout in seconds.
@@ -661,15 +656,14 @@ def sol_test(
     if solc_version is None:
         solc_version = _get_default_solc_version()
 
-    # Check for local solc - parameter takes precedence over config
-    local_solc = solc_tool if solc_tool else _get_solc_tool()
+    # Check for local solc from config
+    local_solc = _get_solc_tool()
 
     contract = sol_contract(
         name = f"_{name}#contract",
         src = src,
         deps = deps,
         solc_version = solc_version,
-        solc_tool = solc_tool,
         solc_flags = solc_flags,
         languages = [],
         visibility = visibility,

@@ -61,12 +61,12 @@ subinclude("///solidity//build_defs:solidity")
 svm(
     name = "svm",
     version = "0.5.22",
+    visibility = ["PUBLIC"],
 )
 
 solc(
     name = "solc_0.8.20",
     version = "0.8.20",
-    svm_tool = ":svm",
     visibility = ["PUBLIC"],
 )
 ```
@@ -74,6 +74,7 @@ solc(
 ```ini
 [Plugin "solidity"]
 Target = //plugins:solidity
+SvmTool = //third_party/solidity:svm
 SolcTool = //third_party/solidity:solc_0.8.20
 ```
 
@@ -204,13 +205,12 @@ svm(
 
 ### solc
 
-Downloads a specific solc version using svm.
+Downloads a specific solc version using svm. Requires SvmTool to be configured.
 
 ```python
 solc(
     name = "solc_0.8.20",
     version = "0.8.20",     # Solidity version to download
-    svm_tool = ":svm",      # Build label for svm binary (optional if SvmTool configured)
     visibility = [],
 )
 ```
