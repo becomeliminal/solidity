@@ -656,7 +656,11 @@ def _sol_get_library(
         test_only: bool = False,
         visibility: list = [],
 ):
-    """Internal helper for sol_get that creates the library with remapping support."""
+    """Internal helper for sol_get that creates the library with remapping support.
+
+    If languages are specified, this will also compile the contracts and generate
+    language bindings (e.g., Go bindings via abigen).
+    """
     # Apply defaults from config
     if solc_version is None:
         solc_version = _get_default_solc_version()
@@ -690,10 +694,33 @@ def _sol_get_library(
         'sol_remappings': remapping_fg,
     }
 
+    # If languages are specified, compile and generate bindings
+    if languages:
+        contract = sol_contract(
+            name = f'_{name}#contract',
+            src = src,
+            deps = deps,
+            solc_version = solc_version,
+            solc_flags = solc_flags,
+            contract_names = contract_names,
+            skip = skip,
+            languages = languages,
+            test_only = test_only,
+            visibility = visibility,
+            _is_dir = True,
+        )
+        # Add language providers from the compiled contract
+        for lang in languages:
+            provides[lang] = f':_{name}#contract'
+
+    all_deps = [solidity_rule, remapping_fg]
+    if languages:
+        all_deps.append(f':_{name}#contract')
+
     return filegroup(
         name = name,
         srcs = [src],
-        deps = [solidity_rule, remapping_fg],
+        deps = all_deps,
         provides = provides,
         visibility = visibility,
         output_is_complete = False,
