@@ -1,5 +1,9 @@
 [please]
-version = 17.8.7
+version = 17.27.0
+
+[parse]
+preloadsubincludes = ///go//build_defs:go
+preloadsubincludes = ///cc//build_defs:cc
 
 [PluginDefinition]
 name = solidity
@@ -75,5 +79,14 @@ Inherit = true
 # TEST CONFIGURATION (for plugin development testing)
 # ============================================================
 
+[Plugin "cc"]
+Target = //plugins:cc
+
+[Plugin "go"]
+Target = //plugins:go
+gotool = //third_party/go:gotool|go
+
 [Plugin "solidity"]
 SvmTool = //test:svm
+AbigenTool = //third_party/go:abigen
+GoEthereumDep = //third_party/go:go-ethereum

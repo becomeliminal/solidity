@@ -591,7 +591,10 @@ def sol_get(
     # e.g., v1.9.4 becomes forge-std-1.9.4/ not forge-std-v1.9.4/
     archive_revision = revision.lstrip('v') if revision.startswith('v') else revision
     quoted_archive_revision = _shell_quote(archive_revision)
+    quoted_repo_name = _shell_quote(repo_name)
 
+    # GitHub archives use {repo_name}-{version} as the directory name
+    archive_dir = f'{quoted_repo_name}-{quoted_archive_revision}'
     cmds = [f'$TOOL x $SRCS -o tmp && mkdir $OUTS']
     for install_path in install:
         quoted_install = _shell_quote(install_path)
@@ -599,11 +602,11 @@ def sol_get(
 
         if install_path == ".":
             # Copy entire package contents preserving structure
-            cmds.append(f'cp -r tmp/$OUTS-{quoted_archive_revision}/{quoted_package}/* $OUTS/')
+            cmds.append(f'cp -r tmp/{archive_dir}/{quoted_package}/* $OUTS/')
         else:
             # Copy specific subdirectory
             cmds.append(f'mkdir -p $OUTS/{quoted_install}')
-            cmds.append(f'cp -r tmp/$OUTS-{quoted_archive_revision}/{quoted_package}/{quoted_install}/* $OUTS/{quoted_install}/')
+            cmds.append(f'cp -r tmp/{archive_dir}/{quoted_package}/{quoted_install}/* $OUTS/{quoted_install}/')
         # Remove test files
         cmds.append(f'find $OUTS -name "*.t.sol" -delete 2>/dev/null || true')
 
@@ -694,12 +697,13 @@ def _sol_get_library(
         'sol_remappings': remapping_fg,
     }
 
-    # If languages are specified, compile and generate bindings
-    if languages:
+    # Compile and generate bindings if requested
+    if languages or contract_names:
+        contract_deps = deps + [remapping_fg]
         contract = sol_contract(
             name = f'_{name}#contract',
             src = src,
-            deps = deps,
+            deps = contract_deps,
             solc_version = solc_version,
             solc_flags = solc_flags,
             contract_names = contract_names,
@@ -709,12 +713,11 @@ def _sol_get_library(
             visibility = visibility,
             _is_dir = True,
         )
-        # Add language providers from the compiled contract
         for lang in languages:
             provides[lang] = f':_{name}#contract'
 
     all_deps = [solidity_rule, remapping_fg]
-    if languages:
+    if languages or contract_names:
         all_deps.append(f':_{name}#contract')
 
     return filegroup(

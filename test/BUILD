@@ -61,3 +61,27 @@ sol_test(
     solc_version = "0.8.20",
     deps = [":counter", ":forge-std"],
 )
+
+# Test sol_get with contract_names but NO go bindings
+# Verifies compilation happens even when languages=[]
+sol_get(
+    name = "solmate",
+    repo = "transmissions11/solmate",
+    revision = "v6",
+    package = "src",
+    install = ["tokens", "utils"],
+    contract_names = ["ERC20"],
+    languages = [],
+    solc_version = "0.8.20",
+    visibility = ["PUBLIC"],
+)
+
+# Test sol_contract with go bindings (simple contract, no deps)
+sol_contract(
+    name = "counter_go",
+    src = "Counter.sol",
+    solc_version = "0.8.20",
+    contract_names = ["Counter"],
+    languages = ["go"],
+    visibility = ["PUBLIC"],
+)
