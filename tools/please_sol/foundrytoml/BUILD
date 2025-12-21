@@ -2,7 +2,7 @@ go_library(
     name = "foundrytoml",
     srcs = ["foundrytoml.go"],
     visibility = ["//tools/please_sol/..."],
-    deps = ["//third_party/go:go-toml-v2"],
+    deps = ["//third_party/solidity/go:go-toml-v2"],
 )
 
 go_test(

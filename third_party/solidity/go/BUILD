@@ -25,6 +25,7 @@ go_module(
 #### CLI tools ####
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-humanize",
     install = ["."],
     module = "github.com/dustin/go-humanize",
@@ -32,6 +33,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-flags",
     install = ["."],
     module = "github.com/thought-machine/go-flags",
@@ -39,6 +41,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-logging",
     install = ["."],
     module = "gopkg.in/op/go-logging.v1",
@@ -46,6 +49,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-cli-init",
     install = ["flags"],
     module = "github.com/peterebden/go-cli-init/v5",
@@ -62,6 +66,7 @@ go_repo(
 #### golang.org/x/xxx ####
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "golang.org_x_crypto",
     install = ["..."],
     module = "golang.org/x/crypto",
@@ -70,10 +75,11 @@ go_repo(
 
 filegroup(
     name = "x_crypto",
-    exported_deps = ["///third_party/go/golang.org_x_crypto//:installs"],
+    exported_deps = ["///third_party/solidity/go/golang.org_x_crypto//:installs"],
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_errors",
     install = ["..."],
     module = "golang.org/x/xerrors",
@@ -81,6 +87,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_exp",
     install = ["constraints", "rand", "slog", "slog/...", "slices", "maps"],
     module = "golang.org/x/exp",
@@ -88,6 +95,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_mod",
     install = ["..."],
     module = "golang.org/x/mod",
@@ -95,6 +103,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_net",
     install = ["..."],
     module = "golang.org/x/net",
@@ -102,6 +111,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_sync",
     install = ["..."],
     module = "golang.org/x/sync",
@@ -109,6 +119,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_sys",
     install = ["..."],
     module = "golang.org/x/sys",
@@ -116,6 +127,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_term",
     install = ["."],
     module = "golang.org/x/term",
@@ -123,6 +135,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_text",
     install = ["..."],
     module = "golang.org/x/text",
@@ -130,6 +143,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_time",
     install = ["rate"],
     module = "golang.org/x/time",
@@ -137,6 +151,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_tools",
     install = ["..."],
     module = "golang.org/x/tools",
@@ -144,6 +159,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "x_perf",
     install = ["benchfmt"],
     module = "golang.org/x/perf",
@@ -151,6 +167,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "goldmark",
     install = ["..."],
     module = "github.com/yuin/goldmark",
@@ -160,6 +177,7 @@ go_repo(
 #### Common deps ####
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "testify",
     install = ["..."],
     module = "github.com/stretchr/testify",
@@ -173,6 +191,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "objx",
     install = ["."],
     module = "github.com/stretchr/objx",
@@ -180,6 +199,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "ginkgo",
     install = ["..."],
     module = "github.com/onsi/ginkgo",
@@ -187,6 +207,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "BurntSushi-toml",
     install = ["."],
     module = "github.com/BurntSushi/toml",
@@ -194,6 +215,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "difflib",
     install = ["difflib"],
     module = "github.com/pmezard/go-difflib",
@@ -201,6 +223,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "spew",
     install = ["spew"],
     module = "github.com/davecgh/go-spew",
@@ -208,6 +231,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "yaml.v2",
     install = ["."],
     module = "gopkg.in/yaml.v2",
@@ -215,6 +239,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "yaml.v3",
     install = ["."],
     module = "gopkg.in/yaml.v3",
@@ -222,6 +247,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "errors",
     install = ["."],
     module = "github.com/pkg/errors",
@@ -229,6 +255,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "snappy",
     install = ["."],
     module = "github.com/golang/snappy",
@@ -236,6 +263,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "xxhash",
     install = ["..."],
     module = "github.com/cespare/xxhash/v2",
@@ -243,6 +271,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "mapstructure",
     install = ["."],
     module = "github.com/mitchellh/mapstructure",
@@ -250,6 +279,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "color",
     install = ["."],
     module = "github.com/fatih/color",
@@ -257,6 +287,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-colorable",
     install = ["."],
     module = "github.com/mattn/go-colorable",
@@ -264,6 +295,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-isatty",
     install = ["."],
     module = "github.com/mattn/go-isatty",
@@ -271,6 +303,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "google-uuid",
     install = ["."],
     module = "github.com/google/uuid",
@@ -278,6 +311,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "moremath",
     install = ["mathx", "stats"],
     module = "github.com/aclements/go-moremath",
@@ -285,6 +319,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cmp",
     install = ["cmp", "cmp/..."],
     module = "github.com/google/go-cmp",
@@ -292,6 +327,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "protobuf",
     install = ["..."],
     module = "github.com/golang/protobuf",
@@ -299,6 +335,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "google.golang.org.protobuf",
     install = ["..."],
     module = "google.golang.org/protobuf",
@@ -308,6 +345,7 @@ go_repo(
 #### Ethereum deps ####
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "automaxprocs",
     install = ["..."],
     module = "go.uber.org/automaxprocs",
@@ -315,6 +353,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-stub",
     install = ["..."],
     module = "github.com/prashantv/gostub",
@@ -322,6 +361,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "bls12-381-util",
     install = ["..."],
     module = "github.com/protolambda/bls12-381-util",
@@ -329,6 +369,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "bls12-381",
     install = ["..."],
     module = "github.com/kilic/bls12-381",
@@ -336,6 +377,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "ztyp",
     install = ["..."],
     module = "github.com/protolambda/ztyp",
@@ -343,6 +385,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "zrnt",
     install = ["..."],
     module = "github.com/protolambda/zrnt",
@@ -350,6 +393,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "messagediff",
     install = ["..."],
     module = "github.com/protolambda/messagediff",
@@ -357,6 +401,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "sha256-simd",
     install = ["..."],
     module = "github.com/minio/sha256-simd",
@@ -364,6 +409,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cpuid",
     install = ["..."],
     module = "github.com/klauspost/cpuid/v2",
@@ -371,6 +417,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "billy",
     install = ["."],
     module = "github.com/holiman/billy",
@@ -378,6 +425,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cli.v1",
     install = ["."],
     module = "gopkg.in/urfave/cli.v1",
@@ -385,6 +433,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cli.v2",
     install = ["..."],
     module = "github.com/urfave/cli/v2",
@@ -393,6 +442,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "smetrics",
     install = ["."],
     module = "github.com/xrash/smetrics",
@@ -400,6 +450,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "md2man",
     install = ["md2man"],
     module = "github.com/cpuguy83/go-md2man/v2",
@@ -407,6 +458,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "blackfriday",
     install = ["."],
     module = "github.com/russross/blackfriday/v2",
@@ -414,6 +466,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "bloomfilter",
     install = ["..."],
     module = "github.com/holiman/bloomfilter/v2",
@@ -421,6 +474,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "hamming",
     install = ["."],
     module = "github.com/steakknife/hamming",
@@ -428,6 +482,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cors",
     install = ["."],
     module = "github.com/rs/cors",
@@ -435,6 +490,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "eventsource",
     install = ["."],
     module = "github.com/donovanhide/eventsource",
@@ -442,6 +498,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "fastssz",
     install = ["."],
     module = "github.com/ferranbt/fastssz",
@@ -449,6 +506,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "flock",
     install = ["."],
     module = "github.com/gofrs/flock",
@@ -456,6 +514,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "fastcache",
     install = ["."],
     module = "github.com/VictoriaMetrics/fastcache",
@@ -463,6 +522,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "fsnotify",
     install = ["."],
     module = "github.com/fsnotify/fsnotify",
@@ -470,6 +530,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "goja",
     install = ["."],
     module = "github.com/dop251/goja",
@@ -477,6 +538,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "regexp2",
     install = ["..."],
     module = "github.com/dlclark/regexp2",
@@ -484,6 +546,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-sourcemap",
     install = ["."],
     module = "github.com/go-sourcemap/sourcemap",
@@ -491,6 +554,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "golang-lru",
     install = ["..."],
     module = "github.com/hashicorp/golang-lru",
@@ -498,6 +562,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-nat-pmp",
     install = ["."],
     module = "github.com/jackpal/go-nat-pmp",
@@ -505,6 +570,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "goupnp",
     install = ["..."],
     module = "github.com/huin/goupnp",
@@ -512,6 +578,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "goutil",
     install = ["codegen"],
     module = "github.com/huin/goutil",
@@ -519,6 +586,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "golang-set",
     install = ["."],
     module = "github.com/deckarep/golang-set",
@@ -526,6 +594,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "golang-set-v2",
     install = ["."],
     module = "github.com/deckarep/golang-set/v2",
@@ -533,6 +602,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-kzg-4844",
     install = ["..."],
     module = "github.com/crate-crypto/go-kzg-4844",
@@ -540,6 +610,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "gnark-crypto",
     install = ["ecc/...", "field/hash", "field/generator/config", "field/generator/internal/addchain", "field/pool", "internal/parallel", "internal/generator/config"],
     module = "github.com/consensys/gnark-crypto",
@@ -547,6 +618,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "bavard",
     install = ["."],
     module = "github.com/consensys/bavard",
@@ -554,6 +626,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "tmplfunc",
     install = ["..."],
     module = "rsc.io/tmplfunc",
@@ -561,6 +634,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "bitset",
     install = ["."],
     module = "github.com/bits-and-blooms/bitset",
@@ -568,6 +642,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "addchain",
     install = ["..."],
     module = "github.com/mmcloughlin/addchain",
@@ -575,6 +650,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "profile",
     install = ["."],
     module = "github.com/mmcloughlin/profile",
@@ -582,6 +658,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "subcommands",
     install = ["."],
     module = "github.com/google/subcommands",
@@ -589,6 +666,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-bexpr",
     install = ["..."],
     module = "github.com/hashicorp/go-bexpr",
@@ -596,6 +674,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "pointerstructure",
     install = ["."],
     module = "github.com/mitchellh/pointerstructure",
@@ -603,6 +682,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-jwt-v4",
     install = ["."],
     module = "github.com/golang-jwt/jwt/v4",
@@ -610,6 +690,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-bip39",
     install = ["..."],
     module = "github.com/tyler-smith/go-bip39",
@@ -626,6 +707,7 @@ go_module(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "gofuzz",
     install = ["."],
     module = "github.com/google/gofuzz",
@@ -633,6 +715,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "gorilla_websocket",
     install = ["."],
     module = "github.com/gorilla/websocket",
@@ -640,6 +723,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "httprouter",
     install = ["."],
     module = "github.com/julienschmidt/httprouter",
@@ -647,6 +731,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "lumberjack.v2",
     install = ["."],
     module = "gopkg.in/natefinch/lumberjack.v2",
@@ -654,6 +739,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "liner",
     install = ["."],
     module = "github.com/peterh/liner",
@@ -661,6 +747,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-runewidth",
     install = ["."],
     module = "github.com/mattn/go-runewidth",
@@ -668,6 +755,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "uniseg",
     install = ["."],
     module = "github.com/rivo/uniseg",
@@ -675,6 +763,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "pebble",
     install = ["..."],
     module = "github.com/cockroachdb/pebble",
@@ -682,6 +771,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "fifo",
     install = ["."],
     module = "github.com/cockroachdb/fifo",
@@ -689,6 +779,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "asciigraph",
     install = ["."],
     module = "github.com/guptarohit/asciigraph",
@@ -696,6 +787,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "hdrhistogram-go",
     install = ["."],
     module = "github.com/codahale/hdrhistogram",
@@ -703,6 +795,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "hdrhistogram",
     install = ["."],
     module = "github.com/HdrHistogram/hdrhistogram-go",
@@ -710,6 +803,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "zstd",
     install = ["."],
     module = "github.com/DataDog/zstd",
@@ -717,6 +811,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cockroachdb-errors",
     install = ["..."],
     module = "github.com/cockroachdb/errors",
@@ -724,6 +819,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "gogo-protobuf",
     install = ["..."],
     module = "github.com/gogo/protobuf",
@@ -731,6 +827,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cockroachdb-redact",
     install = ["..."],
     module = "github.com/cockroachdb/redact",
@@ -738,6 +835,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cockroachdb-logtags",
     install = ["."],
     module = "github.com/cockroachdb/logtags",
@@ -745,6 +843,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cockroachdb-tokenbucket",
     install = ["."],
     module = "github.com/cockroachdb/tokenbucket",
@@ -752,6 +851,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cockroachdb-datadriven",
     install = ["."],
     module = "github.com/cockroachdb/datadriven",
@@ -759,6 +859,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "pretty",
     install = ["."],
     module = "github.com/kr/pretty",
@@ -766,6 +867,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "text",
     install = ["."],
     module = "github.com/kr/text",
@@ -773,6 +875,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "fmtsort",
     install = ["fmtsort"],
     module = "github.com/rogpeppe/go-internal",
@@ -780,6 +883,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "sentry-go",
     install = [".", "internal/debug", "internal/crypto/randutil", "internal/ratelimit"],
     module = "github.com/getsentry/sentry-go",
@@ -787,6 +891,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cobra",
     install = ["."],
     module = "github.com/spf13/cobra",
@@ -794,6 +899,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "pflag",
     install = ["."],
     module = "github.com/spf13/pflag",
@@ -801,6 +907,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "json-iterator",
     install = ["..."],
     module = "github.com/json-iterator/go",
@@ -808,6 +915,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "concurrent",
     install = ["..."],
     module = "github.com/modern-go/concurrent",
@@ -815,6 +923,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "reflect2",
     install = ["..."],
     module = "github.com/modern-go/reflect2",
@@ -823,6 +932,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "prometheus-client",
     install = ["..."],
     module = "github.com/prometheus/client_golang",
@@ -830,6 +940,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "client_model",
     install = ["..."],
     module = "github.com/prometheus/client_model",
@@ -837,6 +948,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "perks",
     install = ["..."],
     module = "github.com/beorn7/perks",
@@ -844,6 +956,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "procfs",
     install = ["..."],
     module = "github.com/prometheus/procfs",
@@ -851,6 +964,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "prometheus-common",
     install = ["expfmt", "model"],
     module = "github.com/prometheus/common",
@@ -859,6 +973,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "golang_protobuf_extensions_v2",
     install = ["..."],
     module = "github.com/matttproud/golang_protobuf_extensions/v2",
@@ -866,6 +981,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "tablewriter",
     install = ["."],
     module = "github.com/olekukonko/tablewriter",
@@ -873,6 +989,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "toml",
     install = ["."],
     module = "github.com/naoina/toml",
@@ -881,6 +998,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-stringutil",
     install = ["."],
     module = "github.com/naoina/go-stringutil",
@@ -888,6 +1006,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-toml-v2",
     install = ["."],
     module = "github.com/pelletier/go-toml/v2",
@@ -895,6 +1014,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "uint256",
     install = ["."],
     module = "github.com/holiman/uint256",
@@ -902,6 +1022,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "verkle",
     install = ["..."],
     module = "github.com/ethereum/go-verkle",
@@ -909,6 +1030,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "gballet-go-verkle",
     install = ["..."],
     module = "github.com/gballet/go-verkle",
@@ -916,6 +1038,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-ipa",
     install = ["..."],
     module = "github.com/crate-crypto/go-ipa",
@@ -923,6 +1046,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "btcec",
     install = ["..."],
     module = "github.com/btcsuite/btcd/btcec/v2",
@@ -934,6 +1058,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "btcd-chaincfg-chainhash",
     install = ["."],
     module = "github.com/btcsuite/btcd/chaincfg/chainhash",
@@ -941,6 +1066,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "decred-secp256k1",
     install = ["..."],
     module = "github.com/decred/dcrd/dcrec/secp256k1/v4",
@@ -949,6 +1075,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "decred-blake256",
     install = ["."],
     module = "github.com/decred/dcrd/crypto/blake256",
@@ -956,6 +1083,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "btcd-chaincfg",
     install = ["chaincfg/chainhash"],
     module = "github.com/btcsuite/btcd",
@@ -963,6 +1091,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "graphql-go",
     install = ["..."],
     module = "github.com/graph-gophers/graphql-go",
@@ -970,6 +1099,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-minisign",
     install = ["."],
     module = "github.com/jedisct1/go-minisign",
@@ -977,6 +1107,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-libpcsclite",
     install = ["."],
     module = "github.com/gballet/go-libpcsclite",
@@ -984,6 +1115,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "derivationpath",
     install = ["derivationpath"],
     module = "github.com/status-im/keycard-go",
@@ -991,6 +1123,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "influxdb1-client",
     install = ["..."],
     module = "github.com/influxdata/influxdb1-client",
@@ -998,6 +1131,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "influxdb-client-go",
     install = [
         ".",
@@ -1011,6 +1145,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "influxdb-line-protocol",
     install = ["..."],
     module = "github.com/influxdata/line-protocol",
@@ -1018,6 +1153,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "deepequal",
     install = ["."],
     module = "github.com/influxdata/influxdb-client-go/v2/internal/gzip",
@@ -1025,6 +1161,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "kylelemons-godebug",
     install = ["..."],
     module = "github.com/kylelemons/godebug",
@@ -1032,6 +1169,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "opentracing",
     install = ["..."],
     module = "github.com/opentracing/opentracing-go",
@@ -1039,6 +1177,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "gopter",
     install = ["..."],
     module = "github.com/leanovate/gopter",
@@ -1047,6 +1186,7 @@ go_repo(
 
 # gopsutil - needed by go-ethereum/metrics
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "gopsutil",
     install = ["..."],
     module = "github.com/shirou/gopsutil",
@@ -1058,6 +1198,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-sysconf",
     install = ["..."],
     module = "github.com/tklauser/go-sysconf",
@@ -1066,6 +1207,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "numcpus",
     install = ["."],
     module = "github.com/tklauser/numcpus",
@@ -1073,6 +1215,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "azure-sdk-azblob",
     install = [".", "container"],
     module = "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob",
@@ -1080,6 +1223,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "azure-sdk-azcore",
     install = ["..."],
     module = "github.com/Azure/azure-sdk-for-go/sdk/azcore",
@@ -1087,6 +1231,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "azure-sdk-internal",
     install = ["..."],
     module = "github.com/Azure/azure-sdk-for-go/sdk/internal",
@@ -1094,6 +1239,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "azure-storege-blob-go",
     install = ["azblob"],
     module = "github.com/Azure/azure-storage-blob-go",
@@ -1101,6 +1247,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "azure-pipeline-go",
     install = ["pipeline"],
     module = "github.com/Azure/azure-pipeline-go",
@@ -1108,6 +1255,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "cloudflare-go",
     install = ["."],
     module = "github.com/cloudflare/cloudflare-go",
@@ -1123,6 +1271,7 @@ go_module(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "docker-reexec",
     install = ["pkg/reexec"],
     module = "github.com/docker/docker",
@@ -1131,6 +1280,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "fileutil",
     install = ["fileutil"],
     module = "github.com/prometheus/tsdb",
@@ -1138,6 +1288,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "github.com_shirou_gopsutil_v3",
     install = ["..."],
     module = "github.com/shirou/gopsutil/v3",
@@ -1145,6 +1296,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "influxdb-client",
     install = ["client", "query", "models", "pkg/escape"],
     module = "github.com/influxdata/influxdb",
@@ -1152,6 +1304,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "mmap-go",
     install = ["."],
     module = "github.com/edsrzf/mmap-go",
@@ -1159,6 +1312,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "memsizeui",
     install = ["..."],
     module = "github.com/fjl/memsize",
@@ -1166,6 +1320,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "notify",
     install = ["."],
     module = "github.com/rjeczalik/notify",
@@ -1173,6 +1328,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "stack",
     install = ["."],
     module = "github.com/go-stack/stack",
@@ -1180,6 +1336,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "stun",
     install = ["..."],
     module = "github.com/pion/stun/v2",
@@ -1187,6 +1344,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "pion-transport.v3",
     install = ["..."],
     module = "github.com/pion/transport/v3",
@@ -1194,6 +1352,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "pion-transport",
     install = ["..."],
     module = "github.com/pion/transport/v2",
@@ -1201,6 +1360,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "pion-logging",
     install = ["..."],
     module = "github.com/pion/logging",
@@ -1208,6 +1368,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "oapi-codegen",
     install = [
         "pkg/runtime",
@@ -1218,6 +1379,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "dtls",
     install = ["..."],
     module = "github.com/pion/dtls/v2",
@@ -1225,6 +1387,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "zap",
     install = ["..."],
     module = "go.uber.org/zap",
@@ -1232,6 +1395,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "multierr",
     install = ["."],
     module = "go.uber.org/multierr",
@@ -1239,6 +1403,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "atomic",
     install = ["."],
     module = "go.uber.org/atomic",
@@ -1246,6 +1411,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "influxql",
     install = ["."],
     module = "github.com/influxdata/influxql",
@@ -1253,6 +1419,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "treeprint",
     install = ["."],
     module = "github.com/xlab/treeprint",
@@ -1260,6 +1427,7 @@ go_repo(
 )
 
 go_repo(
+    third_party_path = "third_party/solidity/go",
     name = "go-ieproxy",
     install = ["."],
     module = "github.com/mattn/go-ieproxy",

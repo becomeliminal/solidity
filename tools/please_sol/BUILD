@@ -5,7 +5,7 @@ go_binary(
     srcs = ["please_sol.go"],
     visibility = ["PUBLIC"],
     deps = [
-        "//third_party/go:go-cli-init",
+        "//third_party/solidity/go:go-cli-init",
         "//tools/please_sol/detectprefix",
         "//tools/please_sol/forgewrap",
         "//tools/please_sol/foundrytoml",
