@@ -463,6 +463,7 @@ def sol_get(
         solc_version: str = None,
         package: str = '.',
         install: list = ['.'],
+        strip: list = [],
         solc_flags: str = '',
         contract_names: list = [],
         skip: list = [],
@@ -489,6 +490,9 @@ def sol_get(
         solc_version: Solidity compiler version. Defaults to plugin config.
         package: Subdirectory within the repo containing sources.
         install: List of subdirectories to install from the package.
+        strip: List of directory names to remove after extraction.
+            Useful for removing test directories that contain incompatible Solidity versions.
+            Example: strip = ["test", "sample-projects"]
         solc_flags: Additional solc flags.
         contract_names: Contract names for language binding generation.
         skip: Contracts to skip during compilation.
@@ -500,6 +504,8 @@ def sol_get(
     _validate_no_traversal(package, "package")
     for install_path in install:
         _validate_no_traversal(install_path, "install")
+    for strip_dir in strip:
+        _validate_no_traversal(strip_dir, "strip")
 
     org, _, repo_name = repo.partition('/')
 
@@ -536,6 +542,11 @@ def sol_get(
             cmds.append(f'cp -r tmp/{archive_dir}/{quoted_package}/{quoted_install}/* $OUTS/{quoted_install}/')
         # Remove test files
         cmds.append(f'find $OUTS -name "*.t.sol" -delete 2>/dev/null || true')
+
+    # Strip specified directories
+    for strip_dir in strip:
+        quoted_strip = _shell_quote(strip_dir)
+        cmds.append(f'find $OUTS -type d -name {quoted_strip} -exec rm -rf {{}} + 2>/dev/null || true')
 
     extract_rule = build_rule(
         name = f"_{name}#extract",

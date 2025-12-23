@@ -93,3 +93,17 @@ sol_contract(
     languages = ["go"],
     visibility = ["PUBLIC"],
 )
+
+# Hardhat - tests strip parameter to remove test/sample-projects directories
+# that contain old Solidity versions incompatible with the main console.sol
+sol_get(
+    name = "hardhat",
+    repo = "NomicFoundation/hardhat",
+    revision = "1c7f8b766052101911df43d7b748fca12bcbf996",
+    package = "packages/hardhat-core",
+    strip = ["test", "sample-projects"],
+    contract_names = ["Console"],
+    solc_version = "0.8.20",
+    languages = [],
+    visibility = ["PUBLIC"],
+)
